@@ -1,0 +1,22 @@
+{% if event_results %}
+    <table class="q-table inner-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Maintenance Fee Event Code</th>
+          <th>Event Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event_date, event_code, event_description in event_results %}
+        <tr>
+          <td>{{ event_date }}</td>
+          <td>{{ event_code }}</td>
+          <td>{{ event_description }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+{% else %}
+<p>No Fee Events Recorded for this patent</p>
+{% endif %}

@@ -1,0 +1,40 @@
+.q-tab-panel,
+.q-pa-md
+	padding: 16px 0
+
+.inner-table th,
+.inner-table td
+  text-align: left
+  padding: 2px 3px
+
+
+.my-sticky-header-table
+  /* height or max-height is important */
+  height: calc(100vh - 70px)
+  // position: fixed
+  // left: 0
+  // bottom: 0
+  // width: 100%
+
+  .q-table thead th,
+  .q-table tbody td
+      width: 50px;
+      white-space: normal;
+
+  .q-table__top,
+  .q-table__bottom,
+  thead tr:first-child th
+    /* bg color is important for th; just specify one */
+    background-color: $grey-3
+
+  thead tr th
+    position: relative
+    z-index: 1
+  thead tr:first-child th
+    top: 0
+
+  /* this is when the loading indicator appears */
+  &.q-table--loading thead tr:last-child th
+    /* height of all previous header rows */
+    top: 0
+

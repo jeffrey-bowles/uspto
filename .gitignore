@@ -1,0 +1,8 @@
+fees/*.p
+feees/db.sqlite3
+__pycache__
+__init.py__
+qfront/dist/
+qfront/node_modules/
+qfront/src-ssr/
+qfront/test/

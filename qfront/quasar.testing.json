@@ -1,0 +1,11 @@
+{
+  "unit-jest": {
+    "runnerCommand": "jest"
+  },
+  "unit-ava": {
+    "runnerCommand": "ava"
+  },
+  "e2e-cypress": {
+    "runnerCommand": "cypress run --config baseUrl=${serverUrl}"
+  }
+}

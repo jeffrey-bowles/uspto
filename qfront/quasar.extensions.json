@@ -1,0 +1,32 @@
+{
+  "@quasar/testing": {
+    "harnesses": [
+      "unit-jest",
+      "unit-ava",
+      "e2e-cypress",
+      "e2e-webdriver",
+      "quality",
+      "security",
+      "security-antivuln"
+    ]
+  },
+  "@quasar/testing-unit-jest": {
+    "babel": false,
+    "options": []
+  },
+  "@quasar/testing-unit-ava": {
+    "babel": false,
+    "options": []
+  },
+  "@quasar/testing-e2e-cypress": {
+    "options": []
+  },
+  "@quasar/testing-quality": {
+    "options": []
+  },
+  "@quasar/testing-security": {
+    "options": [],
+    "zapbrowser": "Chrome"
+  },
+  "@quasar/testing-security-antivuln": {}
+}
