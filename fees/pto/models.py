@@ -7,12 +7,12 @@ class Patent(models.Model):
     entity_status = models.CharField(max_length=1)
     application_date = models.DateField()
     issue_date = models.DateField()
-    reel_num = models.CharField(max_length=10, default=None)
-    frame_num = models.CharField(max_length=10, default=None)
-    correspondent_name = models.CharField(max_length=255, default=None)
-    correspondent_address = models.TextField(default=None)
-    pat_assignee_name = models.CharField(max_length=255, default=None)
-    pat_assignee_address = models.TextField(default=None)
+    reel_num = models.CharField(max_length=10, blank=True, null=True)
+    frame_num = models.CharField(max_length=10, blank=True, null=True)
+    correspondent_name = models.CharField(max_length=255, blank=True, null=True)
+    correspondent_address = models.TextField(blank=True, null=True)
+    pat_assignee_name = models.CharField(max_length=255, blank=True, null=True)
+    pat_assignee_address = models.TextField(blank=True, null=True)
     class Meta:
         verbose_name_plural = 'Patents'
 

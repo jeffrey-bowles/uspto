@@ -28,6 +28,11 @@ from pto.models import Patent, FeeEvents
 DATE_ARRAYS = get_date_arrays()
 
 
+def reload_server():
+    """Reload the server after update of datatsets."""
+    subprocess.call('./reload-dev.sh')
+
+
 def process_docs(docs):
     """Create ordered lists of patent numbers for each table option."""
     ordered_docs = {}
@@ -59,6 +64,9 @@ def process_paid_patents(category, patent_list):
     the specific time frame has already been paid for.
     """
     first_category_word = category.split('_')[0]
+
+    # fee code format is MX55Y, where X is the size of the entity, and
+    # Y is the maintenance year code
     code_num = FIRST_WORD[first_category_word]
     payment_codes = []
     for i in range(1, 4):
@@ -122,7 +130,7 @@ def parse_api_result(patent):
 
 def initial_assignment_data():
     """Build assignment dataset from USPTO csv files if not yet been created"""
-    
+
     # create necessary directories that we will save USPTO assignment data to
     subprocess.call(shlex.split('mkdir -p ../../ad/csv'))
     subprocess.call(shlex.split('mkdir -p ../../ad/adzips'))
@@ -224,7 +232,8 @@ def initial_assignment_data():
             saved_pat.save()
         except Exception as e:
             print(e)
-    return None
+
+    reload_server()
 
 
 def generate_final_data():
@@ -279,42 +288,15 @@ def generate_final_data():
     pickle.dump(paid_patents, open('paid_patents.p', 'wb'), protocol=2)
 
 
-def update_pto_assignment_data():
-    """NEED TO SET UP SEPARATE CRON JOB FOR ASSIGNMENT DATA
-    (EVERY DAY AT 12:00AM)
-    """
-
-    # Trying to keep database minimal size to load fastest, only the last
-    # twelve years of data are required, so we will back up old data, and
-    # remove old rows.
-    today = date.today()
-    old_date_obj = yearsago(12)
-    old_date = str(old_date_obj)
-    filepath = ('removed-%s.sql' % today)
-    sql_string = 'mysqldump -h 127.0.0.1 -u root -P 3306 fees pto_patent \
-    --where="issue_date<\'%s\'" --result-file=../../%s' % (old_date, filepath)
-    subprocess.call(shlex.split(sql_string))
-
-    # Remove all DB records older than 12 years
-    old_pats = Patent.objects.filter(issue_date__lt=old_date_obj)
-    for pat in old_pats:
-        pat.delete()
-
-    # Get complete set of all patents to update with new assignment data
-    pats_to_update = Patent.objects.all()
-
-    # Since cron job running at midnight, we want yesterday to get latest
-    # data since USPTO updates around 10pm every day
-    yesterday = today - timedelta(1)
-    yester_str = yesterday.strftime('%Y%m%d')
-    yester_strf = 'ad' + yester_str
+def process_assignment_xml(zip_file):
+    """download and process USPTO assignment zip and xml files"""
     rfile = ('https://bulkdata.uspto.gov/data/patent/assignment/'
-             + yester_strf + '.zip'
+             + zip_file
             )
     assignment_zip = requests.get(rfile)
 
     # write zip file to disk
-    zfile = '../../ad/adzips/' + yester_strf + '.zip'
+    zfile = '../../ad/adzips/' + zip_file
     with open(zfile, 'wb') as assignment_file:
         assignment_file.write(assignment_zip.content)
 
@@ -323,7 +305,7 @@ def update_pto_assignment_data():
     with zipfile.ZipFile(zfile, 'r') as xml_file:
         xml_file.extractall(path=xml_prefix)
 
-    assn_data = xml_prefix + yester_strf + '.xml'
+    assn_data = xml_prefix + zip_file.replace('zip', 'xml')
     assn_tree = ET.parse(assn_data)
     assn_root = assn_tree.getroot()
     all_assignments = assn_root.findall('./patent-assignments/')
@@ -378,25 +360,25 @@ def update_pto_assignment_data():
             parent_patent = ''
             if len(pat_app_nums) == 1:
                 try:
-                    parent_patent = pats_to_update.get(
+                    parent_patent = Patent.objects.get(
                         application_number=pat_app_nums[0]
                     )
                 except:
                     try:
-                        parent_patent = pats_to_update.get(
+                        parent_patent = Patent.objects.get(
                             patent_number=pat_app_nums[0]
                         )
                     except:
                         pass
             if len(pat_app_nums) == 2:
                 try:
-                    parent_patent = pats_to_update.get(
+                    parent_patent = Patent.objects.get(
                         application_number=pat_app_nums[0],
                         patent_number=pat_app_nums[1]
                     )
                 except:
                     try:
-                        parent_patent = pats_to_update.get(
+                        parent_patent = Patent.objects.get(
                             application_number=pat_app_nums[-1],
                             patent_number=pat_app_nums[0]
                         )
@@ -416,9 +398,74 @@ def update_pto_assignment_data():
                     parent_patent.pat_assignee_address = all_data[5]
                     parent_patent.save()
 
+
+def initial_pto_assignment_data():
+    """Build upon assignment dataset created from initial_assignment_data() by
+    dowloading and processing USPTO assignment zip and xml files
+    """
+    all_zip_links = ['ad19800101-20191231-'+str(i).zfill(2)+'.zip'
+                     for i in range(1, 18)]
+    daily_xmls = date(2020, 1, 1)
+    today = date.today()
+    while daily_xmls < today:
+        zip_to_add = 'ad'+daily_xmls.strftime('%Y%m%d')+'.zip'
+        all_zip_links.append(zip_to_add)
+        daily_xmls = daily_xmls + timedelta(1)
+    pickle.dump(all_zip_links, open('all_zip_links.p', 'wb'), protocol=2)
+
+
+    if not glob('finished_zips.p'):
+        rem_zips = '../../ad/adzips/*.zip'
+        finished_zips = [zip.split('/')[-1] for zip in glob(rem_zips)] 
+    else:
+        finished_zips = pickle.load(open('finished_zips.p', 'rb'))
+
+    remaining_zips = [zfile for zfile in all_zip_links
+                      if zfile not in finished_zips]
+
+    for remaining_zip in remaining_zips:
+        process_assignment_xml(remaining_zip)
+
+        # keep updating processed data in case process is interrupted
+        finished_zips.append(remaining_zip)
+        pickle.dump(today, open('finished_zips.p', 'wb'), protocol=2)
+
+    pickle.dump(today, open('last_assignment_update.p', 'wb'), protocol=2)
+    reload_server()
+
+
+def update_pto_assignment_data():
+    """NEED TO SET UP SEPARATE CRON JOB FOR ASSIGNMENT DATA
+    (EVERY DAY AT 12:00AM)
+    """
+
+    # Trying to keep database minimal size to load fastest, only the last
+    # twelve years of data are required, so we will back up old data, and
+    # remove old rows.
+    today = date.today()
+    old_date_obj = yearsago(12)
+    old_date = str(old_date_obj)
+    filepath = ('removed-%s.sql' % today)
+    sql_string = 'mysqldump -h 127.0.0.1 -u root -P 3306 fees pto_patent \
+    --where="issue_date<\'%s\'" --result-file=../../%s' % (old_date, filepath)
+    subprocess.call(shlex.split(sql_string))
+
+    # Remove all DB records older than 12 years
+    old_pats = Patent.objects.filter(issue_date__lt=old_date_obj)
+    for pat in old_pats:
+        pat.delete()
+
+    # Since cron job running at midnight, we want yesterday to get latest
+    # data since USPTO updates around 10pm every day
+    yesterday = today - timedelta(1)
+    yester_str = yesterday.strftime('%Y%m%d')
+    yester_strf = 'ad' + yester_str + '.zip'
+    process_assignment_xml(yester_strf)
+
     # Make sure to save a record of last date updated so the program
     # processes any missing days
     pickle.dump(today, open('last_assignment_update.p', 'wb'), protocol=2)
+    reload_server()
 
 
 def update_pto_data():
@@ -452,15 +499,13 @@ def update_pto_data():
     with mzip.open(mfile) as main_lines:
         lines = main_lines.readlines()
 
-    lines = set(lines)
+    lines = set([line.decode() for line in lines])
 
     # Need to load the previous entries to compare to latest entries
     # because text comparison is much faster than DB filtering for # of entries
-    if glob('../../maintenance_fee_data/maintfees_old.txt'):
-        with open('../../maintenance_fee_data/maintfees_old.txt',
-                  'rb') as old_file:
-            old_lines = old_file.readlines()
-        old_lines = set(old_lines)
+    mpickle = '../../maintenance_fee_data/maintfees_old.p'
+    if glob(mpickle):
+        old_lines = pickle.load(open(mpickle, 'rb'))
         new_lines = lines.difference(old_lines)
 
         # split each entry into the separate fields, also remove example lines
@@ -493,16 +538,23 @@ def update_pto_data():
             except:
                 maintenance_code = 'N/A'
 
-
-            patent, pat_created = Patent.objects.get_or_create(
-                patent_number=patent_number,
-                application_number=application_number,
-                application_date=application_date,
-                issue_date=issue_date,
-            )
+            # Cant use get_or_create here because patent_number is a unique
+            # field, but sometimes the application fields change in the
+            # updated USPTO data
+            patent = Patent.objects.filter(patent_number=patent_number)
+            if patent:
+                patent = patent.first()
+            else:
+                patent = Patent.objects.create(
+                    patent_number=patent_number,
+                    application_number=application_number,
+                    application_date=application_date,
+                    issue_date=issue_date,
+                )
 
             # need to add/update the entity_status for each entry
             patent.entity_status = entity_status
+            patent.save()
 
             fee_event, fee_created = FeeEvents.objects.get_or_create(
                 patent=patent,
@@ -514,7 +566,7 @@ def update_pto_data():
     else:
 
         # split each entry into the separate fields, also remove example lines
-        split_lines = [line.split() for line in new_lines]
+        split_lines = [line.split() for line in lines]
         split_lines = [line for line in split_lines
                        if not line[1].startswith('59')]
 
@@ -572,24 +624,22 @@ def update_pto_data():
             vcnt += 1
 
     # Need to save latest data in order to compare to new data the next week
-    with open('../../maintenance_fee_data/maintfees_old.txt', 'wb') as new_old:
-        for line in lines:
-            new_old.write(line)
+    pickle.dump(lines, open(mpickle, 'wb'), protocol=2)
 
     # Create a pickled dictionary with event codes as keys and
     # their respective descriptions as their values
     with mzip.open(efile) as fee_file:
-        lines = fee_file.readlines()
+        fee_lines = fee_file.readlines()
 
     fee_codes = {}
-    for line in lines:
+    for line in fee_lines:
         line = line.decode()
         split_line = re.match(r'(.*?)\s+(.*?)\n', line)
         fee_codes[split_line.group(1)] = split_line.group(2)
 
-    pickle.dump(fee_codes, open('../fee_event_codes.p', 'wb'), protocol=2)
+    pickle.dump(fee_codes, open('fee_event_codes.p', 'wb'), protocol=2)
 
     # When all the above code has executed, we can generate the
     # remaining data and reload the server
     generate_final_data()
-    subprocess.call(shlex.split('./manage.py runserver'))
+    reload_server()
