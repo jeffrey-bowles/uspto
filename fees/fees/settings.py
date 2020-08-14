@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'django_crontab',
     'pto'
 ]
 
@@ -71,6 +72,11 @@ TEMPLATES = [
     },
 ]
 
+CRONJOBS = [
+    ('0 0 * * 3', 'pto.pto_cron.update_pto_data'),
+    ('0 0 * * *', 'pto.pto_cron.update_pto_assignment_data')
+]
+
 WSGI_APPLICATION = 'fees.wsgi.application'
 
 
@@ -81,13 +87,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {
-            'init_command': 'SET default_storage_engine=INNODB',
+            'read_default_file': '/etc/django.cnf',
         },
-        'NAME': 'fees',
-        'USER': 'root',
-        'PASSWORD': 'n00bn00b',
-        'HOST': 'localhost',
-        'PORT': 3306,
     }
 }
 

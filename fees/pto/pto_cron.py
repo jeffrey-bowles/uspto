@@ -416,7 +416,7 @@ def initial_pto_assignment_data():
 
     if not glob('finished_zips.p'):
         rem_zips = '../../ad/adzips/*.zip'
-        finished_zips = [zip.split('/')[-1] for zip in glob(rem_zips)] 
+        finished_zips = [zippy.split('/')[-1] for zippy in glob(rem_zips)]
     else:
         finished_zips = pickle.load(open('finished_zips.p', 'rb'))
 
