@@ -27,13 +27,14 @@ to run server:
     cd qfront
 
 to run dev server:
+    
     quasar dev
 
 
 
 after copying GitHub files run the following:
 
-  ./initial-setup.sh
+    ./initial-setup.sh
 
 might take 1-2 days to populate all the data without the pre-existing SQL dump
 
