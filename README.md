@@ -39,7 +39,7 @@ after copying GitHub files run the following:
 
 might take 1-2 days to populate all the data without the pre-existing SQL dump
 
-Add cron jobs
+Run the following command to add all the defined CRONJOBS in settings.py to crontab(*nix cron utility). Make sure to run this command every time CRONJOBS is changed in any way.
  
     ./manage.py crontab add
 
