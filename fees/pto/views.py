@@ -1,5 +1,5 @@
 """
-This view functions in this files are responsible for generating the paginated
+The view functions in this file are responsible for generating the paginated
 USPTO assignment and maintenance fee table data. The main table containing
 assignment data uses Vue routing with the Quasar plugin, while the individual
 fee events are loaded using the django framework.
