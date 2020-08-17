@@ -31,6 +31,7 @@ to run dev server:
     quasar dev
 
 
+### Database/Cron Job Setup Instructions
 
 after copying GitHub files run the following:
 
