@@ -80,7 +80,7 @@ def process_paid_patents(category, patent_list):
 
 
 def patent_api_check(start_date, end_date):
-    """update rows for time frames with latest PatentCheck API
+    """update rows for time frames with latest PatentsView API
     information
     """
     api_results = []
