@@ -161,10 +161,12 @@ def initial_assignment_data():
     for mapfile in mapped_list:
         csvfile = '../../ad/csv/' + mapfile + '.csv'
         rows = []
-        csvreader = csv.reader(csvfile)
-        for row in csvreader:
-            rows.append(row)
-        mapped_dict[mapfile] = rows
+        with open(csvfile) as opencsv:
+            csvreader = csv.reader(opencsv)
+            for row in csvreader:
+                rows.append(row)
+            # First row is just cell column labels
+            mapped_dict[mapfile] = rows[1:]
 
     mapped_data = {}
     for row in mapped_dict['assignment']:
@@ -473,6 +475,9 @@ def update_pto_data():
     USPTO Maintenance Fee Data contains all patents, so we can build
     patent database first and associate assignment data later.
     """
+
+    # create necessary directories that we will save USPTO maintenance data to
+    subprocess.call(shlex.split('mkdir -p ../../maintenance_fee_data'))
 
     # Get latest maintenance fee data from USPTO (updated every Tuesday)
     mainfile = ('https://bulkdata.uspto.gov/data/patent/'
