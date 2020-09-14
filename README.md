@@ -43,3 +43,6 @@ Run the following command to add all the defined CRONJOBS in settings.py to cron
  
     ./manage.py crontab add
 
+Once everything has been set up, and both the Django and Quasar dev servers have been launched, [localhost:4000](http://localhost:4000) should display the following:
+
+![alt text](https://github.com/jeffrey-bowles/uspto/blob/master/patdocs.png?raw=true)
